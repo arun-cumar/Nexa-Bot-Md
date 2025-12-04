@@ -483,38 +483,50 @@ async def send_file_handler(client, callback):
     message_id_str = callback.data.split("_")[1]
     message_id = int(message_id_str)
     
-    # 1. Force subscribe check
-    if FORCE_SUB_CHANNEL and not await is_subscribed(client, user_id, max_retries=3):
-        # If not subscribed, handle the join prompt
-        join_button = [
-            [InlineKeyboardButton("Join Channel", url=f"https://t.me/{FORCE_SUB_CHANNEL.replace('@', '')}")],
-            # Pass the group/channel message ID (callback.message.id) to be edited/deleted later
-            [InlineKeyboardButton("✅ Joined, Send File", callback_data=f"checksub_{message_id}_{callback.message.id}_{callback.message.chat.id}")] 
-        ]
-        
-        await callback.answer("Please join the channel to get the file. Click the button in DM after joining.", show_alert=True)
+    # 1. Admin Exemption: Check if the user is in the ADMINS list
+    is_admin = user_id in ADMINS
+    
+    if is_admin:
+        print(f"DEBUG: Admin {user_id} detected. Skipping force subscribe check.")
+        # If admin, delete the original message immediately (as no check is needed)
         try:
-            # Send the button to the user's private chat
-            await client.send_message(
-                chat_id=user_id,
-                text=f"You must join the channel {FORCE_SUB_CHANNEL} to access the file. Please join and click the button below.",
-                reply_markup=InlineKeyboardMarkup(join_button)
-            )
-            # Do NOT delete the group/channel message yet!
-            await callback.answer("Please click the button sent in our private chat.", show_alert=True)
-        except Exception:
-             await callback.answer("File sending failed. Please send the /start command to the bot to begin a private chat.", show_alert=True)
-             return
-        return
+            await callback.message.delete()
+        except Exception as e:
+            print(f"Error deleting inline message for admin: {e}")
+        
+        # Skip to step 3 (File Fetching)
+    else:
+        # 1. Force subscribe check for regular users
+        if FORCE_SUB_CHANNEL and not await is_subscribed(client, user_id, max_retries=3):
+            # If not subscribed, handle the join prompt
+            join_button = [
+                [InlineKeyboardButton("Join Channel", url=f"https://t.me/{FORCE_SUB_CHANNEL.replace('@', '')}")],
+                [InlineKeyboardButton("✅ Joined, Send File", callback_data=f"checksub_{message_id}_{callback.message.id}_{callback.message.chat.id}")] 
+            ]
+            
+            await callback.answer("Please join the channel to get the file. Click the button in DM after joining.", show_alert=True)
+            try:
+                # Send the button to the user's private chat
+                await client.send_message(
+                    chat_id=user_id,
+                    text=f"You must join the channel {FORCE_SUB_CHANNEL} to access the file. Please join and click the button below.",
+                    reply_markup=InlineKeyboardMarkup(join_button)
+                )
+                await callback.answer("Please click the button sent in our private chat.", show_alert=True)
+            except Exception:
+                await callback.answer("File sending failed. Please send the /start command to the bot to begin a private chat.", show_alert=True)
+                return
+            return # IMPORTANT: Exit the function here for non-subscribed users
 
-    # 2. Subscribed, proceed to send file
-    # Deleting the group/channel message now since subscription is confirmed
-    try:
-        await callback.message.delete()
-    except Exception as e:
-        print(f"Error deleting inline message after sub confirmed: {e}")
+        # 2. Subscribed, proceed to send file (for non-admins who passed the check)
+        # Deleting the group/channel message now since subscription is confirmed
+        try:
+            await callback.message.delete()
+        except Exception as e:
+            print(f"Error deleting inline message after sub confirmed: {e}")
 
-    # 3. Fetch File Details
+
+    # 3. Fetch File Details (Applies to both Admins and Subscribed Users)
     file = await db.files_col.find_one({"message_id": message_id}) 
     
     if not file:
@@ -524,7 +536,7 @@ async def send_file_handler(client, callback):
 
     file_title = file.get('title', 'Requested File')
     
-    # 4. Fetch IMDb Data & Construct Caption (Code remains the same here)
+    # 4. Fetch IMDb Data & Construct Caption
     imdb_info = await fetch_omdb_data(file_title)
     
     caption = f"🎬 **{file_title}**\n\n"
@@ -541,6 +553,7 @@ async def send_file_handler(client, callback):
         caption += "Get your file below 👇"
 
     # 5. Send Poster (if available)
+    poster_sent = False
     if imdb_info and imdb_info.get('Poster') and imdb_info['Poster'] != 'N/A':
         try:
             await client.send_photo(
@@ -548,7 +561,8 @@ async def send_file_handler(client, callback):
                 photo=imdb_info['Poster'],
                 caption=caption
             )
-            caption = None 
+            caption = None # Clear caption as it was sent with the photo
+            poster_sent = True
         except Exception as e:
             print(f"Error sending poster photo to user {user_id}: {e}. Falling back to text caption.")
     
@@ -561,7 +575,7 @@ async def send_file_handler(client, callback):
         )
         
         # If poster failed/wasn't sent, send the caption separately to ensure it reaches the user
-        if caption:
+        if not poster_sent and caption:
              await client.send_message(user_id, caption)
         
         await callback.answer("The file has been sent to your private chat.", show_alert=True)
@@ -609,6 +623,7 @@ async def check_sub_handler(client, callback):
             caption += "Get your file below 👇"
 
         # Send Poster (if available)
+        poster_sent = False
         if imdb_info and imdb_info.get('Poster') and imdb_info['Poster'] != 'N/A':
             try:
                 await client.send_photo(
@@ -617,6 +632,7 @@ async def check_sub_handler(client, callback):
                     caption=caption
                 )
                 caption = None 
+                poster_sent = True
             except Exception as e:
                 print(f"Error sending poster photo to user {user_id}: {e}. Falling back to text caption.")
 
@@ -629,7 +645,7 @@ async def check_sub_handler(client, callback):
             )
             
             # If poster failed/wasn't sent, send the caption separately
-            if caption:
+            if not poster_sent and caption:
                  await client.send_message(user_id, caption)
 
             # Edit the original "Join Channel" message to say success in DM
