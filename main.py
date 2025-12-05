@@ -2,7 +2,6 @@ import os
 import re
 import asyncio
 import json
-import time # Added for better cache timestamping
 from pyrogram import Client, filters
 from pyrogram.enums import ChatType
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, Document, Video, Audio, CallbackQuery
@@ -70,24 +69,6 @@ class Database:
         self.files_col = self.db["files"]
         # New collection for caching search queries for pagination
         self.search_cache_col = self.db["search_cache"] 
-        # Create indexes for fast searching (Recommended for performance)
-        self._client.get_io_loop().run_until_complete(self._create_indexes())
-
-    async def _create_indexes(self):
-        """Creates necessary MongoDB indexes."""
-        # Index on title and caption for search speed
-        await self.files_col.create_index([
-            ("title", "text"), 
-            ("caption", "text")
-        ], name="text_search_index", default_language='english')
-
-        # TTL index for automatically cleaning up expired search cache (e.g., after 1 hour)
-        await self.search_cache_col.create_index(
-            "timestamp", 
-            expireAfterSeconds=3600, 
-            name="ttl_index"
-        )
-        print("MongoDB indexes created/updated.")
 
     async def find_one(self, query: Dict[str, Any]) -> Union[Dict[str, Any], None]:
         """Finds a single document matching the query."""
@@ -99,10 +80,9 @@ class Database:
 
     async def cache_query(self, message_id: int, query_text: str):
         """Caches the search query tied to a message ID."""
-        # Use standard time.time() for a Unix timestamp suitable for TTL index
         await self.search_cache_col.update_one(
             {"_id": message_id},
-            {"$set": {"query": query_text, "timestamp": time.time()}},
+            {"$set": {"query": query_text, "timestamp": asyncio.time()}},
             upsert=True
         )
 
@@ -254,17 +234,46 @@ async def get_file_details(query: str, page: int = 1, limit: int = RESULTS_PER_P
     # Split query into words for better matching (word-boundary searches)
     words = [word.strip() for word in re.split(r'\W+', query) if len(query.strip()) > 2 and len(word.strip()) > 1]
     
-    # Use MongoDB's $text operator on the indexed fields (title and caption)
-    # This provides the most efficient and relevant search when an index is present.
-    search_query = {"$text": {"$search": query}}
+    all_word_conditions = []
+    if words:
+        for word in words:
+            word_regex = re.escape(word)
+            all_word_conditions.append({
+                "$or": [
+                    {"title": {"$regex": f".*\\b{word_regex}\\b.*", "$options": "i"}},
+                    {"caption": {"$regex": f".*\\b{word_regex}\\b.*", "$options": "i"}}
+                ]
+            })
 
+    # Exact phrase search (to prioritize high-relevance matches)
+    escaped_query = re.escape(query)
+    phrase_regex = f".*{escaped_query}.*"
+    phrase_condition = {
+        "$or": [
+            {"title": {"$regex": phrase_regex, "$options": "i"}},
+            {"caption": {"$regex": phrase_regex, "$options": "i"}}
+        ]
+    }
+
+    # Combine search conditions
+    if all_word_conditions:
+        search_query = {
+            "$or": [
+                {"$and": all_word_conditions}, # All words must be present (high relevance)
+                phrase_condition             # Or the exact phrase must be present
+            ]
+        }
+    else:
+        # If the query is too short, rely only on the phrase condition
+        search_query = phrase_condition
+        
     # 1. Get total count first for pagination logic
     total_count = await db.files_col.count_documents(search_query)
     
     # 2. Apply skip and limit for pagination
     skip_amount = (page - 1) * limit
-    # Sort by text score to return most relevant results first
-    cursor = db.files_col.find(search_query, {"score": {"$meta": "textScore"}}).sort([("score", {"$meta": "textScore"})]).skip(skip_amount).limit(limit)
+    # NOTE: No orderBy used to prevent requiring extra indexes in MongoDB.
+    cursor = db.files_col.find(search_query).skip(skip_amount).limit(limit)
     files = await cursor.to_list(length=limit)
     
     return files, total_count
@@ -288,10 +297,7 @@ def create_file_buttons(files: List[Dict[str, Any]], original_msg_id: int, origi
     buttons = []
     for file in files:
         media_icon = {"document": "📄", "video": "🎬", "audio": "🎵"}.get(file.get('media_type', 'document'), '❓')
-        # Use file name and truncate for cleaner buttons
-        file_name_clean = file.get("title", "File").rsplit('.', 1)[0].strip()
-        if len(file_name_clean) > 40:
-             file_name_clean = file_name_clean[:37] + "..."
+        file_name_clean = file.get("title", "File").rsplit('.', 1)[0].strip() 
         
         # Format: getfile_{file_message_id}_{group_message_id}_{group_chat_id}
         callback_data = f"getfile_{file.get('message_id')}_{original_msg_id}_{original_chat_id}"
@@ -378,8 +384,6 @@ async def handle_send_file(client, user_id, message_id):
                 
                 if sent_msgs:
                     # SCHEDULE AUTODELETE FOR DM MESSAGE (User Client - as it was forwarded by user)
-                    # Note: Using the bot client to delete the message forwarded by the user client might not work if permissions are different.
-                    # For simplicity, we use the client that initiated the forward (user_client)
                     asyncio.create_task(delete_after_delay(user_client, sent_msgs[0].chat.id, sent_msgs[0].id, delay=60))
                         
                 return True, "File forwarded successfully via user session."
@@ -724,5 +728,30 @@ async def redirect_to_dm_handler(client, callback):
         )
     except Exception as e:
         print(f"Error answering callback with URL: {e}")
-        # FIX: Complete the incomplete function call from the original code
-        await callback.answer("❌ Failed to redirect. Please try again.", show_alert=True)
+        await callback.answer("❌ Failed to redirect to DM. Please try again.", show_alert=True)
+        return
+    
+    # Update the group message to confirm the action and remove the clickable button
+    try:
+        await callback.message.edit_text(
+            "✅ **Redirected to DM!**\n\n"
+            "Please go to the bot's private chat and press the **Send** button. The file will be sent immediately. (File will be deleted after 60s)",
+            reply_markup=None # Remove buttons after redirection
+        )
+    except Exception as e:
+         print(f"Error editing message after redirect: {e}")
+
+# --- MAIN ENTRY POINT ---
+
+if __name__ == "__main__":
+    if WEBHOOK_URL_BASE:
+        # Use uvicorn to serve the FastAPI app (for Render deployment)
+        uvicorn.run("main:api_app", host="0.0.0.0", port=PORT, log_level="info")
+    else:
+        # Use app.run() for local polling mode testing
+        print("Starting Pyrogram in polling mode...")
+        # Note: In polling mode, we start the client first then run checks.
+        asyncio.run(app.start())
+        asyncio.run(startup_initial_checks())
+        app.idle()
+
