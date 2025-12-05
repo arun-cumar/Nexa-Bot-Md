@@ -9,7 +9,7 @@ from pyrogram.errors import UserNotParticipant, MessageNotModified, ChatAdminReq
 from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
 from typing import List, Dict, Any, Union
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request, Response # Important: Imports needed for Uvicorn
 from contextlib import asynccontextmanager
 from http import HTTPStatus
 import uvicorn
@@ -94,6 +94,71 @@ if USER_SESSION_STRING:
         session_string=USER_SESSION_STRING, 
     )
     print("User session initialized for indexing/forwarding.")
+
+
+# --- RENDER WEBHOOK SETUP (FastAPI) - MOVED UP TO PREVENT LOADING ERRORS ---
+
+async def startup_initial_checks():
+    """Checks to run on startup."""
+    print("Performing initial startup checks...")
+    
+    # 1. Database check
+    try:
+        files_count = await db.files_col.count_documents({})
+        print(f"Database check complete. Found {files_count} files in the database.")
+    except Exception as e:
+        print(f"WARNING: Database connection failed on startup: {e}")
+        
+    # 2. Force Sub Admin check (CRITICAL)
+    if FORCE_SUB_CHANNEL:
+        print(f"FORCE_SUB_CHANNEL is set to: {FORCE_SUB_CHANNEL}. Verifying bot administration status...")
+        
+@asynccontextmanager
+async def lifespan(web_app: FastAPI):
+    # Run checks only once when the bot starts
+    await startup_initial_checks()
+    
+    if WEBHOOK_URL_BASE:
+        # Start Pyrogram client and set webhook
+        await app.start() 
+        if user_client: # Start user client for forwarding/indexing
+            await user_client.start()
+            
+        await app.set_webhook(url=f"{WEBHOOK_URL_BASE}{WEBHOOK_PATH}")
+        print(f"Webhook successfully set: {WEBHOOK_URL_BASE}{WEBHOOK_PATH}")
+    else:
+        # Start in polling mode (local testing)
+        await app.start()
+        if user_client:
+            await user_client.start()
+        print("Starting in polling mode (for local testing only).")
+        
+    yield
+    await app.stop()
+    if user_client:
+         await user_client.stop()
+    print("Application stopped.")
+
+# FastAPI instance (CRITICAL: Defined at module level for Uvicorn)
+api_app = FastAPI(lifespan=lifespan)
+
+# Webhook endpoint for Telegram updates
+@api_app.post(WEBHOOK_PATH)
+async def process_update(request: Request):
+    """Receives and processes Telegram updates."""
+    try:
+        req = await request.json()
+        await app.process_update(req)
+        return Response(status_code=HTTPStatus.OK)
+    except Exception as e:
+        print(f"Error processing update: {e}")
+        return Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR)
+
+# Render health check endpoint
+@api_app.get("/")
+async def health_check():
+    """Render health check endpoint."""
+    return {"status": "ok"}
 
 
 # --- HELPERS ---
@@ -588,71 +653,6 @@ async def check_sub_handler(client, callback):
         # If handle_send_file failed, it has already sent an error message to the user.
         await callback.message.edit_text(f"❌ ഫയൽ അയക്കുന്നതിൽ ഒരു പിശക് സംഭവിച്ചു.")
 
-
-# --- RENDER WEBHOOK SETUP (FastAPI) ---
-
-# --- STARTUP/SHUTDOWN LIFECYCLE ---
-async def startup_initial_checks():
-    """Checks to run on startup."""
-    print("Performing initial startup checks...")
-    
-    # 1. Database check
-    try:
-        files_count = await db.files_col.count_documents({})
-        print(f"Database check complete. Found {files_count} files in the database.")
-    except Exception as e:
-        print(f"WARNING: Database connection failed on startup: {e}")
-        
-    # 2. Force Sub Admin check (CRITICAL)
-    if FORCE_SUB_CHANNEL:
-        print(f"FORCE_SUB_CHANNEL is set to: {FORCE_SUB_CHANNEL}. Verifying bot administration status...")
-        
-@asynccontextmanager
-async def lifespan(web_app: FastAPI):
-    # Run checks only once when the bot starts
-    await startup_initial_checks()
-    
-    if WEBHOOK_URL_BASE:
-        # Start Pyrogram client and set webhook
-        await app.start() 
-        if user_client: # Start user client for forwarding/indexing
-            await user_client.start()
-            
-        await app.set_webhook(url=f"{WEBHOOK_URL_BASE}{WEBHOOK_PATH}")
-        print(f"Webhook successfully set: {WEBHOOK_URL_BASE}{WEBHOOK_PATH}")
-    else:
-        # Start in polling mode (local testing)
-        await app.start()
-        if user_client:
-            await user_client.start()
-        print("Starting in polling mode (for local testing only).")
-        
-    yield
-    await app.stop()
-    if user_client:
-         await user_client.stop()
-    print("Application stopped.")
-
-# FastAPI instance
-api_app = FastAPI(lifespan=lifespan)
-
-# Webhook endpoint for Telegram updates
-@api_app.post(WEBHOOK_PATH)
-async def process_update(request: Request):
-    """Receives and processes Telegram updates."""
-    try:
-        req = await request.json()
-        await app.process_update(req)
-        return Response(status_code=HTTPStatus.OK)
-    except Exception as e:
-        print(f"Error processing update: {e}")
-        return Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR)
-
-# Render health check endpoint
-@api_app.get("/")
-async def health_check():
-    """Render health check endpoint."""
-    return {"status": "ok"}
 
 # --- MAIN ENTRY POINT ---
 
