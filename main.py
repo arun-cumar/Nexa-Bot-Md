@@ -33,10 +33,8 @@ NEW_CAPTION = (
 API_ID = int(os.environ.get("API_ID", 12345))
 API_HASH = os.environ.get("API_HASH", "YOUR_API_HASH")
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "YOUR_BOT_TOKEN")
-# Channel/Group ID where the files are stored (must be a private channel where the User Session has access)
 PRIVATE_FILE_STORE = int(os.environ.get("PRIVATE_FILE_STORE", -100)) 
 LOG_CHANNEL = int(os.environ.get("LOG_CHANNEL", -100))
-# Pyrogram Session String for a user account to handle protected content forwarding and indexing
 USER_SESSION_STRING = os.environ.get("USER_SESSION_STRING", None) 
 
 # Admin list
@@ -46,7 +44,6 @@ if admin_env:
     ADMINS = [int(admin.strip()) for admin in admin_env.split(',') if admin.strip().isdigit()]
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "mongodb://localhost:27017")
-# Optional channel for Force Subscription check
 FORCE_SUB_CHANNEL = os.environ.get("FORCE_SUB_CHANNEL", None) 
 
 # Webhook details for Render/Cloud deployment
@@ -273,7 +270,7 @@ async def handle_send_file(client, user_id, message_id):
     
     if not file:
         try:
-            await client.send_message(user_id, "❌ Sorry, this file has been removed from the database.")
+            await client.send_message(user_id, "❌ Sorry, the file has been removed from the database.")
         except Exception:
             pass
         return False, "File removed."
@@ -297,8 +294,7 @@ async def handle_send_file(client, user_id, message_id):
         
         # --- 2. FALLBACK: Attempt to Forward using User Session (for protected content) ---
         global user_client
-        # Check for specific "protected content" error or a general RPC error if forwarding is a desired fallback
-        if user_client and ("MESSAGE_PROTECTED" in str(e).upper() or "RPC" in str(e).upper()): 
+        if user_client and ("MESSAGE_PROTECTED" in str(e).upper()):
             print(f"Falling back to user session forwarding for user {user_id}...")
             try:
                 if not user_client.is_running:
@@ -312,8 +308,6 @@ async def handle_send_file(client, user_id, message_id):
                 
                 if sent_msgs:
                     # SCHEDULE AUTODELETE FOR DM MESSAGE (User Client - as it was forwarded by user)
-                    # NOTE: This only works if the user client is an admin and has delete permissions,
-                    # or if the message is in a private chat with the user (which it is).
                     asyncio.create_task(delete_after_delay(user_client, sent_msgs[0].chat.id, sent_msgs[0].id, delay=60))
                         
                 return True, "File forwarded successfully via user session."
@@ -321,11 +315,11 @@ async def handle_send_file(client, user_id, message_id):
                 print(f"Fallback forwarding failed for user {user_id}: {forward_e}")
         
         # --- 3. Final Error Message (After all failures) ---
-        error_msg = ("❌ **Sorry, failed to send the file!** ❌\n\n"
-                     "There might be 2 main reasons:\n"
-                     "1. You might have **blocked** me. Please unblock and try again.\n"
-                     "2. Your **Private Chat settings** might be preventing file delivery.\n\n"
-                     "Please **unblock the bot and send /start** to retry.")
+        error_msg = ("❌ **Sorry, the file could not be sent!** ❌\n\n"
+                     "There could be 2 main reasons:\n"
+                     "1. You may have blocked me. Please unblock and try again.\n"
+                     "2. Your privacy settings might not allow receiving files in private chat.\n\n"
+                     "Please **unblock me and send /start** to retry.")
         try:
             await client.send_message(user_id, error_msg)
         except Exception:
@@ -365,9 +359,6 @@ async def start_command(client, message: Message):
                 # payload is expected to be file_{message_id}_{group_msg_id}_{group_chat_id}
                 _, message_id_str, group_msg_id_str, group_chat_id_str = payload.split('_')
                 message_id = int(message_id_str)
-                # Group message details are still included in the payload but no longer used for deletion.
-                # group_msg_id = int(group_msg_id_str)
-                # group_chat_id = int(group_chat_id_str)
                 
                 await message.reply_text("✅ Starting delivery. Please wait...")
                 
@@ -378,34 +369,34 @@ async def start_command(client, message: Message):
                 )
                 
                 if success:
-                    await message.reply_text("🎉 File successfully sent! It will be deleted after 60 seconds. Go back to the group for the next file.")
+                    await message.reply_text("🎉 File sent successfully! It will be deleted after 60 seconds. Go back to the group for the next file.")
                 return
 
             except Exception as e:
                 print(f"Error processing deep-link payload: {e}")
-                await message.reply_text("❌ File delivery failed. The link might be broken. Please click the button in the group again.")
+                await message.reply_text("❌ File delivery failed. The link might be broken. Click the button in the group again.")
                 return
 
     # Standard /start message
     start_text = (
-        "Hi! I am your **Auto Filter Bot.** 🤩\n\n"
+        "Hi! I'm your **Auto Filter Bot.** 🤩\n\n"
         "🔎 **How to use me?**\n"
-        "1. Type the name of the movie or series you want in a group or channel where I am an admin.\n"
-        "2. Click the result button that appears.\n"
-        "3. A button will appear saying **'Click here to get the file'**. Click it and send **/start** in the DM.\n"
-        "4. The file will be immediately sent to this private chat (DM)! 🎉 (Note: The file will be deleted after 60 seconds)\n\n"
+        "1. Type the name of the movie or series you want in any group or channel where I am an admin.\n"
+        "2. Click on the result button that appears. \n"
+        "3. Immediately come here and send the **/start** message.\n"
+        "4. The file will be sent to your private chat (DM) immediately! 🎉 (Note: The file will be deleted after 60 seconds)\n\n"
         "🔗 **Our Channels:**\n"
         "°•➤ @Mala_Television\n"
         "°•➤ @Mala_Tv\n"
         "°•➤ @MalaTvbot ™️\n\n"
         "**Admin Commands:**\n"
-        "• `/index` - To index all files from the channel.\n"
+        "• `/index` - To index all files in the channel.\n"
         "• `/dbcount` - To check the number of files in the database."
     )
     
     await message.reply_text(start_text)
 
-# --- ADMIN COMMANDS ---
+# --- ADMIN COMMANDS (Indexing, etc.) ---
 
 @app.on_message(filters.command("index") & filters.user(ADMINS))
 async def index_command(client, message: Message):
@@ -438,7 +429,6 @@ async def index_command(client, message: Message):
         if not user_client.is_running:
             await user_client.start() 
 
-        # Iterate through the history of the file store channel using the user client
         async for chat_msg in user_client.get_chat_history(chat_id=PRIVATE_FILE_STORE): 
             total_messages_processed += 1
             file_id, file_name, file_object = get_file_info(chat_msg)
@@ -448,7 +438,7 @@ async def index_command(client, message: Message):
                 
                 try:
                     await db.files_col.update_one( 
-                        {"file_id": file_id}, # Query to find existing file by its unique ID
+                        {"file_id": file_id},
                         {
                             "$set": {
                                 "title": file_name,
@@ -459,20 +449,20 @@ async def index_command(client, message: Message):
                                 "media_type": file_object.__class__.__name__.lower()
                             }
                         },
-                        upsert=True # Insert a new document if no match is found
+                        upsert=True
                     )
                     total_files_indexed += 1
                     
                     if total_files_indexed % 50 == 0:
                          try:
-                             await msg.edit_text(f"✅ Indexed Files: **{total_files_indexed}** / **{total_messages_processed}**")
+                             await msg.edit_text(f"✅ Indexed Files: {total_files_indexed} / {total_messages_processed}")
                          except MessageNotModified:
                              pass 
 
                 except Exception as db_error:
                     print(f"INDEX_DEBUG: DB WRITE error for file {file_name}: {db_error}")
             
-        await msg.edit_text(f"🎉 Indexing complete! Total **{total_files_indexed}** files added or updated. (**{total_messages_processed}** messages checked)")
+        await msg.edit_text(f"🎉 Indexing complete! Total {total_files_indexed} files added or updated. ({total_messages_processed} messages checked)")
         
     except Exception as general_error:
         await msg.edit_text(f"❌ Indexing Error: {general_error}. Please check if the user account has access to the channel and the ID is correct.")
@@ -505,13 +495,11 @@ async def global_handler(client, message: Message):
     # --- 1. COPYRIGHT MESSAGE DELETION LOGIC ---
     COPYRIGHT_KEYWORDS = ["copyright", "unauthorized", "DMCA", "piracy"] 
     is_copyright_message = any(keyword.lower() in query.lower() for keyword in COPYRIGHT_KEYWORDS)
-    # Check if the message is in the file store or from an admin in any chat (for protection)
-    is_protected_chat = chat_id == PRIVATE_FILE_STORE or message.from_user.id in ADMINS
+    is_protected_chat = chat_id == PRIVATE_FILE_STORE or chat_id in ADMINS
     
     if is_copyright_message and is_protected_chat:
         try:
             await message.delete()
-            # Log the deletion
             await client.send_message(LOG_CHANNEL, f"🚫 **Copyright message deleted!**\n\n**Chat ID:** `{chat_id}`\n**User:** {message.from_user.mention}\n**Message:** `{query}`")
             return
         except Exception as e:
@@ -521,10 +509,9 @@ async def global_handler(client, message: Message):
     # --- 2. AUTO-FILTER SEARCH (ONLY IN GROUPS/CHANNELS) ---
     
     if chat_type == ChatType.PRIVATE:
-        await message.reply_text("👋 To search for files, please go to a group or channel where I am an admin and type the name. Click the button that appears, and the file will be delivered here.")
+        await message.reply_text("👋 To search for files, please go to a group or channel where I am an admin and type the name. Click the button that appears to get the file here.")
         return
         
-    # Ignore messages from the file store channel to prevent infinite loops/redundant searches
     if chat_id == PRIVATE_FILE_STORE:
         return
         
@@ -534,12 +521,11 @@ async def global_handler(client, message: Message):
     
     if files:
         # Files found: Send inline buttons
-        text = f"✅ **Results for '{query}':**\n\nClick the button below to get the file, then send **/start** in the DM."
+        text = f"✅ **Results for {query}:**\n\nClick the button below to get the file. You will be redirected to DM."
         buttons = []
         # --- START BUTTON GENERATION LOOP ---
         for file in files:
             media_icon = {"document": "📄", "video": "🎬", "audio": "🎵"}.get(file.get('media_type', 'document'), '❓')
-            # Clean file name for button text
             file_name_clean = file.get("title", "File").rsplit('.', 1)[0].strip() 
             
             # Use callback_data to hold the message ID and its original location details
@@ -554,7 +540,7 @@ async def global_handler(client, message: Message):
         # --- END BUTTON GENERATION LOOP ---
         
         if len(files) == 10:
-             buttons.append([InlineKeyboardButton("More Results ➡️", url="https://t.me/your_search_group")]) # Placeholder URL
+             buttons.append([InlineKeyboardButton("More Results ➡️", url="https://t.me/your_search_group")]) 
 
         await message.reply_text(
             text=text,
@@ -562,18 +548,17 @@ async def global_handler(client, message: Message):
             disable_web_page_preview=True
         )
         
-        # NOTE: Group message auto-delete after 60 seconds is disabled as per original logic/user request.
+        # NOTE: Group message auto-delete after 60 seconds remains DISABLED.
     else:
-        # No files found, optionally you can add a "No results" message or a suggestion.
-        # pass
         pass
                 
-# --- CALLBACK QUERY HANDLER (Redirects to DM via Deep Link) ---
+# --- CALLBACK QUERY HANDLER (Direct Redirection to DM via URL Answer) ---
 
 @app.on_callback_query(filters.regex("^getfile_")) 
 async def redirect_to_dm_handler(client, callback):
     """
-    Handles the initial filter button click and redirects the user to DM using a deep link.
+    Handles the initial filter button click and directly redirects the user to DM 
+    by answering the callback query with the deep link URL.
     """
     global BOT_USERNAME
     user_id = callback.from_user.id
@@ -581,11 +566,11 @@ async def redirect_to_dm_handler(client, callback):
     # callback data: getfile_{file_message_id}_{group_message_id}_{group_chat_id}
     data_parts = callback.data.split('_')
     
-    # The payload for the deep link will be: file_{file_message_id}_{group_message_id}_{group_chat_id}
+    # The payload for the deep link will be: file_{file_message_id}_{group_msg_id}_{group_chat_id}
     deep_link_payload = f"file_{data_parts[1]}_{data_parts[2]}_{data_parts[3]}"
     
     if not BOT_USERNAME:
-        await callback.answer("❌ Bot username is not available. Please try again shortly.", show_alert=True)
+        await callback.answer("❌ Bot username is not available. Please try again later.", show_alert=True)
         return
 
     deep_link = f"https://t.me/{BOT_USERNAME}?start={deep_link_payload}"
@@ -593,35 +578,44 @@ async def redirect_to_dm_handler(client, callback):
     # 1. FORCE SUB CHECK (if applicable)
     if FORCE_SUB_CHANNEL and not await is_subscribed(client, user_id, max_retries=2):
         join_button = [
-            # Assuming FORCE_SUB_CHANNEL is in @username format or an ID that Telegram can resolve
             [InlineKeyboardButton("✅ Join Channel", url=f"https://t.me/{FORCE_SUB_CHANNEL.replace('@', '')}")],
-            [InlineKeyboardButton("👍 Joined, Come to DM for File", url=deep_link)]
+            # After joining, the user will have to click the group filter button again.
         ]
         
         await callback.answer("✋ Please join the channel to get the file. (Click the button to join the channel)", show_alert=True)
         
-        # Modify the message to show the Join/DeepLink buttons
+        # Modify the message to show the Join button (no deep-link here, user must re-click after joining)
         await callback.message.edit_text(
-            "🔑 **Mandatory Step:** You must be a member of our channel.\n\n"
-            "Click the button below to join the channel. Then, come back to DM.",
+            "🔑 **Mandatory Step:** You must join our channel.\n\n"
+            "Click the button below to join the channel. Then **go back to the group and click the filter button again.**",
             reply_markup=InlineKeyboardMarkup(join_button)
         )
         return 
         
-    # 2. SUBSCRIBED / NO FORCE SUB: Direct Deep Link
+    # 2. SUBSCRIBED / NO FORCE SUB: Direct Redirection
     
-    deep_link_button = [
-        [InlineKeyboardButton("🔑 Click Here to Get the File", url=deep_link)]
-    ]
+    # Answer the callback with the deep link URL. This instantly redirects the user to the DM.
+    try:
+        await callback.answer(
+            text="🔑 Go to DM and send /start.", 
+            show_alert=False,
+            url=deep_link # <-- CRITICAL: Direct redirection via URL
+        )
+    except Exception as e:
+        # If the deep link is too long (unlikely here) or other issues
+        print(f"Error answering callback with URL: {e}")
+        await callback.answer("❌ Failed to redirect to DM. Please try again.", show_alert=True)
+        return
     
-    await callback.answer("Send **/start** in the DM to receive the file.", show_alert=False)
-    
-    # Modify the message to show the DeepLink button
-    await callback.message.edit_text(
-        "🎉 **One more click to get the file!**\n\n"
-        "Click the button below, go to DM and send **/start**. The file will arrive immediately.",
-        reply_markup=InlineKeyboardMarkup(deep_link_button)
-    )
+    # Update the group message to confirm the action and remove the clickable button
+    try:
+        await callback.message.edit_text(
+            "✅ **You have been redirected to DM!**\n\n"
+            "Please go to the bot's private chat and press the **Send** button. The file will be received immediately. (File will be deleted after 60s)",
+            reply_markup=None # Remove buttons after redirection
+        )
+    except Exception as e:
+         print(f"Error editing message after redirect: {e}")
 
 # --- MAIN ENTRY POINT ---
 
@@ -632,6 +626,5 @@ if __name__ == "__main__":
     else:
         # Use app.run() for local polling mode testing
         print("Starting Pyrogram in polling mode...")
-        # Need to run initial checks inside an asyncio context if not using uvicorn/lifespan
         asyncio.run(startup_initial_checks())
         app.run()
