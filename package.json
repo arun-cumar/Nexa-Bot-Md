@@ -1,2 +1,38 @@
 
 
+{
+  "name": "nexa-bot",
+  "version": "3.0.0",
+  "description": "Nexa WhatsApp Multi-Device Bot with Plugins",
+  "type": "module",
+  "main": "main.js",
+  "scripts": {
+    "start": "node main.js",
+    "dev": "nodemon main.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "latest",
+    "qrcode-terminal": "^0.12.0",
+    "pino": "^9.2.0",
+    "pino-pretty": "^11.2.1",
+    "@hapi/boom": "^10.0.1",
+    "axios": "^1.6.8",
+    "node-fetch": "^3.3.2",
+    "cheerio": "^1.0.0",
+    "ytdl-core": "^4.11.5",
+    "fluent-ffmpeg": "^2.1.2",
+    "jimp": "^0.22.10",
+    "sharp": "^0.33.4",
+    "file-type": "^19.0.0",
+    "moment": "^2.30.1",
+    "moment-timezone": "^0.5.45",
+    "dotenv": "^16.4.5",
+    "fs-extra": "^11.2.0",
+    "mongoose": "^8.4.0",
+    "qrcode": "^1.5.3",
+    "mathjs": "^13.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
