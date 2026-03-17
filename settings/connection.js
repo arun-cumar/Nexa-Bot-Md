@@ -1,12 +1,16 @@
-import fs from 'fs'
+import fs from 'fs' 
 import { DisconnectReason } from '@whiskeysockets/baileys'
-import qrcode from 'qrcode-terminal' // QR Terminal-il kaanikkan ithu venam
+import qrcode from 'qrcode-terminal'
 
 const connection = async (sock, startNexa, saveCreds) => {
-    sock.ev.on('connection.update', async (update) => {
-        const { connection, lastDisconnect, qr } = update // 'qr' ivide extract cheyyuka
+    
+    // Creds update ivide thanne handle cheyyunnathaanu nallathu
+    sock.ev.on('creds.update', saveCreds)
 
-        // --- 1. QR CODE GENERATOR ---
+    sock.ev.on('connection.update', async (update) => {
+        const { connection, lastDisconnect, qr } = update
+
+        // --- QR GENERATOR ---
         if (qr && !process.argv.includes('--pairing-code')) {
             console.log('\x1b[33m--- SCAN THE QR CODE BELOW ---\x1b[0m');
             qrcode.generate(qr, { small: true });
@@ -14,73 +18,50 @@ const connection = async (sock, startNexa, saveCreds) => {
 
         if (connection === 'close') {
             const reason = lastDisconnect?.error?.output?.statusCode
-            console.log("❌ Connection Closed :", reason)
+            console.log("❌ Connection Closed. Reason Code:", reason)
 
-            if (reason === DisconnectReason.badSession) {
-                console.log("Bad Session File, Delete Session")
+            // 401 (Unauthorized) or 405 (Logged Out) aanel session delete cheyyendi varum
+            if (reason === DisconnectReason.loggedOut || reason === 401 || reason === 405) {
+                console.log("❌ Session Expired or Logged Out. Please delete session folder and scan again.")
                 process.exit()
-            }
-            else if (reason === DisconnectReason.connectionClosed || reason === DisconnectReason.connectionLost || reason === DisconnectReason.timedOut || reason === DisconnectReason.restartRequired) {
+            } 
+            else if (reason === DisconnectReason.restartRequired || reason === DisconnectReason.connectionLost) {
                 console.log("🔁 Reconnecting...")
                 startNexa()
-            }
-            else if (reason === DisconnectReason.connectionReplaced || reason === DisconnectReason.loggedOut) {
-                console.log("⚠️ Session Terminated")
-                process.exit()
-            }
+            } 
             else {
-                console.log("Unknown DisconnectReason:", reason)
-                startNexa()
+                // Mattu errors aanenkil 5 second kazhinju reconnect cheyyaam
+                console.log("⚠️ Unknown error, trying to reconnect in 5s...")
+                setTimeout(() => startNexa(), 5000)
             }
         }
 
         else if (connection === 'open') {
             console.log('\x1b[36m✅ Nexa-Bot MD CONNECTED SUCCESSFULLY!\x1b[0m')
-
+            
+            // Login Message Logic
             const myNumber = sock.user.id.split(':')[0] + "@s.whatsapp.net"
             const activeMsg = `
-╭━━〔 *Nexa-Bot-MD* 〕━━╮
-┃🛠️ STATUS: Online
-┃👤 OWNER: Arun & Ansad 
-┃⚙️ MODE: Public
-┃📌 PREFIX: [ .,!#$@ ]
-┃🤖 BOT CONNECTED SUCCESSFULLY
-╰━━━━━━━━━━━━━━━╯
-*THE UNDERWORLD IS ACTIVE*`
+            ╭━━〔 *Nexa-Bot-MD* 〕━━╮
+            ┃🛠️ STATUS: Online
+            ┃👤 OWNER: Arun & Ansad
+            ╰━━━━━━━━━━━━━━━╯`
 
             try {
-                const imagePath = './media/image.jpg'
+                const imagePath = './media/nexa.jpg'
                 if (fs.existsSync(imagePath)) {
-                    await sock.sendMessage(myNumber, {
-                        image: fs.readFileSync(imagePath),
-                        caption: activeMsg,
-                        contextInfo: {
-                            mentionedJid: [myNumber],
-                            isForwarded: true,
-                            forwardingScore: 999,
-                            forwardedNewsletterMessageInfo: {
-                                newsletterJid: '120363422992896382@newsletter',
-                                newsletterName: 'Nexa-Bot',
-                                serverMessageId: 143
-                            },
-                            externalAdReply: {
-                                title: 'Nexa-Bot ACTIVE',
-                                body: 'Underworld WhatsApp Bot',
-                                thumbnail: fs.readFileSync(imagePath),
-                                sourceUrl: 'https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24',
-                                mediaType: 1,
-                                renderLargerThumbnail: true
-                            }
-                        }
+                    await sock.sendMessage(myNumber, { 
+                        image: fs.readFileSync(imagePath), 
+                        caption: activeMsg 
                     })
+                } else {
+                    await sock.sendMessage(myNumber, { text: activeMsg })
                 }
             } catch (err) {
-                console.log("❌ Error sending owner message", err)
+                console.log("❌ Login Notification Error:", err.message)
             }
         }
     })
-
-    sock.ev.on('creds.update', saveCreds)
 }
 
 export default connection
