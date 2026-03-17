@@ -22,6 +22,6 @@
     "axios": "^1.6.2",
   },
   "devDependencies": {
-    "nodemon": "^3.0.2"
+    "nodemon": "latest"
   }
 }
