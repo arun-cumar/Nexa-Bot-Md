@@ -8,7 +8,7 @@
     "start": "node main.js"
   },
   "dependencies": {
-    "@whiskeysockets/baileys": "^7.0.0.9",
+    "@whiskeysockets/baileys": "latest",
     "@adiwajshing/keyed-db": "latest",
     "axios": "latest",
     "pino": "latest",
