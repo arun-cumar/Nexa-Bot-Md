@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { pathToFileURL } from "url";
 import config from "./config.js";
-const toggleFile = "./database/toggles.json";
+const toggleFile = "./media/toggles.json";
 
 // load toggles
 let toggles = {};
@@ -24,6 +24,7 @@ export default async (sock, chatUpdate) => {
         if (msg.key.remoteJid === "status@broadcast") return;
 
         const from = msg.key.remoteJid;
+        const sender = msg.key.participant || msg.key.remoteJid;
 
         const body =
             msg.message.conversation ||
@@ -38,6 +39,22 @@ export default async (sock, chatUpdate) => {
             : "";
 
         const args = text.split(/ +/).slice(1);
+
+       // Global Mode Check (Public/Private)
+if (!toggles.global) toggles.global = { mode: "public" };
+
+if (commandName === "mode") {
+    const newMode = args[0]?.toLowerCase();
+    if (newMode === "public" || newMode === "private") {
+        toggles.global.mode = newMode;
+        saveToggles();
+        return await sock.sendMessage(from, { text: `✅ Bot mode changed to *${newMode}*` }, { quoted: msg });
+    }
+}
+
+// Private mode 
+const isOwner = config.OWNER_NUMBER.includes(sender.split('@')[0]);
+if (toggles.global.mode === "private" && !isOwner) return;
 
         if (!isCmd) return;
 
