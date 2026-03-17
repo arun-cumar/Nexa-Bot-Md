@@ -1,23 +1,34 @@
 import fs from 'fs'  
 import { DisconnectReason } from '@whiskeysockets/baileys'
-  await sock.sendPresenceUpdate('composing', from);
-               await new Promise(resolve => setTimeout(resolve, 4000));
-}
+const connection = async (sock, startNexa, saveCreds) => {
+
    sock.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect } = update;
+        
         if (connection === 'close') {
-            const shouldReconnect = lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut;
-            if (shouldReconnect) startNexa();
-        } else if (connection === 'open') {
+            const reason = lastDisconnect?.error?.output?.statusCode;
+            const shouldReconnect = reason !== DisconnectReason.loggedOut;
+            
+            console.log(`❌ Connection Closed. Reason: ${reason}`);
+            
+            if (shouldReconnect) {
+                console.log("🔁 Reconnecting...");
+                startNexa();
+            }
+        } 
+        
+        else if (connection === 'open') {
             console.log('\x1b[36m✅ Nexa-Bot MD Connected Successfully!\x1b[0m');
+            
             const myNumber = sock.user.id.split(':')[0] + "@s.whatsapp.net";
             const activeMsg = `
 ╭━━〔 *Nexa-Bot-MD* 〕━━╮
 ┃🛠️ STATUS: Online
 ┃👤 OWNER: Arun & Ansad
 ╰━━━━━━━━━━━━━━━╯`;
+
             try {
-                const imagePath = './media/image.jpg';
+                const imagePath = './media/nexa.jpg';
                 if (fs.existsSync(imagePath)) {
                     await sock.sendMessage(myNumber, { 
                         image: fs.readFileSync(imagePath), 
