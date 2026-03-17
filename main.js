@@ -31,7 +31,7 @@ if (sessionData) {
     }
 }
 
-// --- 2. UPTIME SERVER (For Render/Koyeb) ---
+// --- 2. UPTIME SERVER  ---
 const app = express();
 app.get('/', (req, res) => res.send('Nexa-Bot MD is Alive! '));
 app.listen(process.env.PORT || 3000);
