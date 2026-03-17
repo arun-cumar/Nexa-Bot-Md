@@ -19,8 +19,12 @@
   },
   "dependencies": {
     "@whiskeysockets/baileys": "^7.0.0-rc.9",
+    "@adiwajshing/keyed-db": "latest",
     "axios": "^1.6.2",
     "pino": "latest",
+    "fs-extra": "latest",
+    "express": "latest",
+    "qrcode-terminal": "latest"
   },
   "devDependencies": {
     "nodemon": "latest"
