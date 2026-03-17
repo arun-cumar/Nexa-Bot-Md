@@ -1,16 +1,10 @@
 import fs from 'fs'
 import { DisconnectReason } from '@whiskeysockets/baileys'
-
-const connection = async (sock, startAsura, saveCreds) => {
-
-sock.ev.on('connection.update', async (update) => {
-
-const { connection, lastDisconnect } = update
-
+ const connection = async (sock, startNexa, saveCreds) => {
+ sock.ev.on('connection.update', async (update) => {
+ const { connection, lastDisconnect } = update
 if(connection === 'close'){
-
 const reason = lastDisconnect?.error?.output?.statusCode
-
 console.log("❌ Connection Closed :", reason)
 
 if(reason === DisconnectReason.badSession){
@@ -20,12 +14,12 @@ process.exit()
 
 else if(reason === DisconnectReason.connectionClosed){
 console.log("🔁 Connection closed, reconnecting...")
-startAsura()
+startNexa()
 }
 
 else if(reason === DisconnectReason.connectionLost){
 console.log("⚠️ Connection Lost, reconnecting...")
-startAsura()
+startNexa()
 }
 
 else if(reason === DisconnectReason.connectionReplaced){
@@ -40,12 +34,12 @@ process.exit()
 
 else if(reason === DisconnectReason.restartRequired){
 console.log("🔄 Restart Required")
-startAsura()
+startNexa()
 }
 
 else if(reason === DisconnectReason.timedOut){
 console.log("⏱️ Connection TimedOut Reconnecting")
-startAsura()
+startNexa()
 }
 
 else{
