@@ -14,6 +14,7 @@
     "pino": "latest",
     "fs-extra": "latest",
     "express": "latest",
-    "qrcode-terminal": "latest"
+    "qrcode-terminal": "latest",
+    "yt-search": "latest"
   }
 }
