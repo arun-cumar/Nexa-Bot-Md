@@ -3,15 +3,16 @@ import makeWASocket, {
     fetchLatestBaileysVersion, 
     makeCacheableSignalKeyStore 
 } from "@whiskeysockets/baileys";
-
 import pino from "pino";
 import fs from "fs";
 import path from "path";
 import readline from "readline";
 import express from "express";
-import config from "./config.js"; 
+import { handlePairing } from "./lib/pairing.js";
+import { handleOwnerEvents } from "./lib/owner.js";
 import connectionHandler from "./settings/connection.js";
 import messageHandler from "./message.js";
+import config from "./config.js"; 
 
 const sessionPath = "./session";
 const sessionData = process.env.SESSION_ID;
@@ -54,31 +55,13 @@ async function startNexa() {
         browser: ["Ubuntu", "Chrome", "20.0.04"]
     });
 
-    if (!sock.authState.creds.registered) {
-        const phoneNumber = await question("\n📞 Enter Phone Number with Country Code (91xxxx): ");
-        const code = await sock.requestPairingCode(phoneNumber.replace(/[^0-9]/g, ""));
-        console.log(`\n🗝 Pairing Code: ${code}\n`);
-    }
+       await handlePairing(sock);
+    handleOwnerEvents(sock);
 
     connectionHandler(sock, startNexa, saveCreds);
 
     sock.ev.on("messages.upsert", async (chatUpdate) => {
         await messageHandler(sock, chatUpdate);
-    });
-
-    sock.ev.on("connection.update", async (update) => {
-        if (update.connection === "open") {
-            setTimeout(async () => {
-                try {
-                    await sock.newsletterFollow("120363422992896382@newsletter");
-                    console.log("📢 Channel Followed");
-                    await sock.groupAcceptInvite("LdNb1Ktmd70EwMJF3X6xPD");
-                    console.log("👥 Group Join Attempted");
-                } catch (err) {
-                    console.log("ℹ️ Auto join skipped or already joined");
-                }
-            }, 10000); 
-        }
     });
 }
 
