@@ -1,3 +1,4 @@
+// © 2026 arun•°Cumar. All Rights Reserved.
 import menuHandler from '../commands/menu.js';
 import aliveHandler from '../commands/alive.js';
 import pingHandler from '../commands/ping.js';
