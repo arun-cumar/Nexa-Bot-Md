@@ -1,5 +1,5 @@
 // © 2026 arun•°Cumar. All Rights Reserved.
-import { fquoted } from './lib/quoted.js';
+import { fquoted } from './settings/quoted.js';
 import menuHandler from '../commands/menu.js';
 import aliveHandler from '../commands/alive.js';
 import pingHandler from '../commands/ping.js';
