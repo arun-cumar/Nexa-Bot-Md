@@ -1,4 +1,4 @@
-
+// © 2026 arun•°Cumar. All Rights Reserved.
 import fs from 'fs';
 import path from 'path';
 import config from '../config.js';
