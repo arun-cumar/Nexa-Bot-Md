@@ -2,9 +2,8 @@
 import config from "../config.js";
 
 export const parseMessage = (msg) => {
-
     const m = msg.message || {};
-
+    
     const body =
         m.conversation ||
         m.extendedTextMessage?.text ||
@@ -23,16 +22,26 @@ export const parseMessage = (msg) => {
     
     const isCmd = config.PREFIX.split('').some(p => text.startsWith(p));
     const prefix = isCmd ? config.PREFIX.split('').find(p => text.startsWith(p)) : "";
-
-    const commandName = isCmd
-        ? text.slice(prefix.length).trim().split(/ +/)[0].toLowerCase()
-        : "";
-
-    const args = isCmd ? text.trim().split(/ +/).slice(1) : [];
-
+    const commandName = isCmd ? text.slice(prefix.length).trim().split(/ +/)[0].toLowerCase() : "";
+    const args = text.trim().split(/ +/).slice(1);
+    const fullArgs = args.join(" ");
     const from = msg.key?.remoteJid;
+    
     const isGroup = from?.endsWith("@g.us");
     const sender = isGroup ? msg.key?.participant : from;
+    const pushName = msg.pushName || "User";
+
+    const quoted = m.extendedTextMessage?.contextInfo?.quotedMessage ? {
+        message: m.extendedTextMessage.contextInfo.quotedMessage,
+        sender: m.extendedTextMessage.contextInfo.participant,
+        id: m.extendedTextMessage.contextInfo.stanzaId,
+        isMedia: !!(m.extendedTextMessage.contextInfo.quotedMessage.imageMessage || 
+                   m.extendedTextMessage.contextInfo.quotedMessage.videoMessage || 
+                   m.extendedTextMessage.contextInfo.quotedMessage.stickerMessage)
+    } : null;
+
+    const isMedia = !!(m.imageMessage || m.videoMessage || m.stickerMessage || m.documentMessage);
+    const type = Object.keys(m)[0]; 
 
     return {
         body,
@@ -40,10 +49,15 @@ export const parseMessage = (msg) => {
         isCmd,
         commandName,
         args,
+        fullArgs,
         sender,
+        pushName,
         from,
         isGroup,
         prefix,
+        quoted,
+        isMedia,
+        type,
         msg
     };
 };
