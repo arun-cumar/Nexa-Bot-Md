@@ -30,7 +30,7 @@ export default async (sock, msg, args) => {
         const time = new Date().toLocaleTimeString();
         
         // Commands Read
-        const commandsDir = path.join(process.cwd(), 'plugins);
+        const commandsDir = path.join(process.cwd(), 'plugins');
                                       
         const files = fs.readdirSync(commandsDir).filter(file => file.endsWith('.js'));
 
