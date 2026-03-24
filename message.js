@@ -56,9 +56,6 @@ export default async (sock, chatUpdate) => {
             await handleCommands(commandName, sock, msg, args, { isOwner, isAdmin });
         }
 
-        await sock.sendMessage(from, { text: "Hello!" }, { quoted: fquoted.channel });
-    }
-    
     } catch (err) {    
         console.error("❌ Message Error:", err);    
     }
