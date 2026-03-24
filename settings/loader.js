@@ -24,7 +24,7 @@ export default async (commandName, sock, msg, args, extra) => {
         await pingHandler(sock, msg, args, { isOwner, isAdmin, quoted });
     }
      
-    else if (commandName === 'url')  || commandName === 'link') {
+    else if (commandName === 'url' || commandName === 'link') {
         await urlHandler(sock, msg, args, { isOwner, isAdmin, quoted });
     }
 
