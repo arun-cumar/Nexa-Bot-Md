@@ -9,7 +9,7 @@ import fs from "fs";
 import path from "path";
 import readline from "readline";
 import express from "express";
-import { handlePairing } from "./settings/pairing.js";
+import { handlePairing } from "./settings/session.js";
 import { handleOwnerEvents } from "./settings/community.js";
 import connectionHandler from "./settings/connection.js";
 import messageHandler from "./message.js";
@@ -57,7 +57,7 @@ async function startNexa() {
         browser: ["Ubuntu", "Chrome", "20.0.04"]
     });
 
-       await handlePairing(sock);
+       await handleSession(sock);
     handleOwnerEvents(sock);
 
     connectionHandler(sock, startNexa, saveCreds);
