@@ -1,28 +1,66 @@
 // © 2026 arun•°Cumar. All Rights Reserved.
-import fs from 'fs' 
+import fs from 'fs';
 import config from "../config.js";
-import { DisconnectReason } from '@whiskeysockets/baileys'
+import { DisconnectReason } from '@whiskeysockets/baileys';
+
+const dbPath = './database/connection.json';
+
+function saveConnectionData(data) {
+    let json = {};
+
+    if (fs.existsSync(dbPath)) {
+        json = JSON.parse(fs.readFileSync(dbPath));
+    }
+
+    const newData = { ...json, ...data };
+    fs.writeFileSync(dbPath, JSON.stringify(newData, null, 2));
+}
+
 const connection = async (sock, startNexa, saveCreds) => {
 
-   sock.ev.on('connection.update', async (update) => {
+    sock.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect } = update;
-        
+
         if (connection === 'close') {
             const reason = lastDisconnect?.error?.output?.statusCode;
             const shouldReconnect = reason !== DisconnectReason.loggedOut;
-            
+
             console.log(`❌ Connection Closed. Reason: ${reason}`);
-            
+
+            // Save disconnect info
+            saveConnectionData({
+                status: "offline",
+                lastDisconnect: new Date().toISOString()
+            });
+
             if (shouldReconnect) {
                 console.log("🔁 Reconnecting...");
+                
+                // Increase reconnect count
+                let data = {};
+                if (fs.existsSync(dbPath)) {
+                    data = JSON.parse(fs.readFileSync(dbPath));
+                }
+
+                saveConnectionData({
+                    reconnects: (data.reconnects || 0) + 1
+                });
+
                 startNexa();
             }
         } 
         
         else if (connection === 'open') {
             console.log('\x1b[36m✅ Nexa-Bot MD Connected Successfully!\x1b[0m');
-            
+
+            // Save connect info
+            saveConnectionData({
+                status: "online",
+                lastConnect: new Date().toISOString()
+            });
+
             const myNumber = sock.user.id.split(':')[0] + "@s.whatsapp.net";
+
             const activeMsg = `
 ╭━━〔 ${config.BOT_NAME} 〕━━╮
 ┃ 🛠️ STATUS: Online
@@ -30,8 +68,7 @@ const connection = async (sock, startNexa, saveCreds) => {
 ┃ 📞 CONTACT: ${config.OWNER_NUMBER}
 ┃ ⚡ PREFIX: ${config.PREFIX}
 ┃ 📝 DESC: ${config.DESCRIPTION}
-╰━━━━━━━━━━━━━━━╯
-eval(decodeURIComponent(atob('YXJ1biVFMiU4MCVBMiVDMiVCMEN1bWFyJTIwJTBBJTBBJTBBJTBBJTBBJTBBJTBBJTBBJTBBJTBBJTBBJTBBJTBBJTBBJTBBJTBBJTBBJTBBJTBBJTBBJTBBJTBBJTBBJTBBJTBBJTBBJTBBJTBBJTBBJTBBJTBBJTBBJTBBJTBBJTBBJTBBJTBBJTBBJTBBJTBBJTBBJTBBJTBBJTBBJTBBJTBBJTBBJTBBJTBBYXJ1biVFMiU4MCVBMiVDMiVCMEN1bWFy')))`;
+╰━━━━━━━━━━━━━━━╯`;
 
             try {
                 const imagePath = './media/nexa.jpg';
@@ -53,38 +90,3 @@ eval(decodeURIComponent(atob('YXJ1biVFMiU4MCVBMiVDMiVCMEN1bWFyJTIwJTBBJTBBJTBBJT
 };
 
 export default connection;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
