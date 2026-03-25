@@ -11,10 +11,10 @@ function saveConnectionData(data) {
     if (fs.existsSync(dbPath)) {
         json = JSON.parse(fs.readFileSync(dbPath));
     }
-
-    const newData = { ...json, ...data };
-    fs.writeFileSync(dbPath, JSON.stringify(newData, null, 2));
-}
+    
+  const saveConnectionData = (data) => {
+    fs.writeFileSync('./database/connection.json', JSON.stringify(data, null, 2));
+};
 
 const delay = (ms) => new Promise(res => setTimeout(res, ms));
 
