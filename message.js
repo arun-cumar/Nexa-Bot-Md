@@ -2,6 +2,7 @@
 import path from "path";
 import { pathToFileURL } from "url";
 import fs from "fs";
+import { checkAdmin, checkOwner } from "./settings/check.js";
 import { getToggles } from "./lib/toggles.js";
 import { parseMessage } from "./settings/msgHelper.js";
 import { handleCommands } from "./settings/loader.js";
