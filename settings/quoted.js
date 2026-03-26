@@ -1,4 +1,4 @@
-
+// © 2026 arun•°Cumar. All Rights Reserved.
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import chalk from 'chalk'; 
