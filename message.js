@@ -17,10 +17,14 @@ export default async (sock, chatUpdate) => {
         const sender = msg.key.participant || msg.key.remoteJid;
         const senderNumber = sender.replace(/\D/g, ''); 
 
-        // 2. Owner checking
-        const isOwner = config.OWNER_NUMBER.some(num => num.replace(/\D/g, '') === senderNumber) || msg.key.fromMe;
+        //  Owner checking
+        const isOwner = checkOwner(sender, msg.key.fromMe);
+        let isAdmin = false;
+        if (isGroup) {
+            isAdmin = await checkAdmin(sock, from, sender);
+       }
 
-        // 3. Mention Sticker Logic
+        //  Mention Sticker Logic
         const mentions = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
         if (mentions.length > 5) {
             const stickerPath = './media/sticker.webp';
@@ -31,23 +35,23 @@ export default async (sock, chatUpdate) => {
             }
         }
 
-        // 4. Parse Message    
+        // Parse Message    
         const { isCmd, commandName, args } = parseMessage(msg);    
         if (!isCmd || !commandName) return;    
 
-        // 5. Get Toggles & Command Status Check
+        //  Get Toggles & Command Status Check
         const toggles = getToggles();    
         if (toggles[commandName]?.status === "off") return;    
 
-        // 6. Global Public/Private Mode Check   
+        //  Global Public/Private Mode Check   
         if (global.isPublic === false && !isOwner) return;  
 
-        // 7. Specific Command Private Check   
+        //  Specific Command Private Check   
         if (toggles[commandName]?.mode === "private" && !isOwner) {  
             return await sock.sendMessage(from, { text: "🔒 This command is for my Owner only." });  
         }  
 
-           // 8.Manual loader 
+           // Execute commands 
         if (isCmd && commandName) {
             if (!from.endsWith('@lid')) {
                 await sock.sendPresenceUpdate('composing', from);
