@@ -7,7 +7,7 @@ import pingHandler from '../plugins/ping.js';
 import urlHandler from '../plugins/url.js';  
 import stickerHandler from '../plugins/sticker.js';  
   
-export async function executeCommand(commandName, sock, msg, args, extra) {  
+export async function handleCommand(commandName, sock, msg, args, extra) {  
     const { isOwner, isAdmin } = extra;  
   
     const quoted = fquoted(msg);   
