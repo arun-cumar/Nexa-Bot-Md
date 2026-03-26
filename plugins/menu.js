@@ -3,7 +3,6 @@ import fs from 'fs';
 import path from 'path';
 import config from '../config.js';
 import menuDesigns from '../lib/menu.js';
-import { sendInteractiveMessage } from '../settings/interactive.js';
 
 export default async (sock, msg, args) => {
     try {
