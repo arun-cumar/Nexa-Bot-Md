@@ -1,13 +1,13 @@
 // © 2026 arun•°Cumar. All Rights Reserved.   
-import ownerHandler from '../plugins/owner.js';
-import menuHandler from '../plugins/menu.js';  
-import aliveHandler from '../plugins/alive.js';  
-import pingHandler from '../plugins/ping.js';  
-import urlHandler from '../plugins/url.js';  
-import stickerHandler from '../plugins/sticker.js';  
-import videoHandler from '../plugins/video.js';  
-import playHandler from '../plugins/play.js';  
-import tagallHandler from '../plugins/tagall.js';
+import ownerHandler from '../plugins/system/owner.js';
+import menuHandler from '../plugins/system/menu.js';  
+import aliveHandler from '../plugins/system/alive.js';  
+import pingHandler from '../plugins/system/ping.js';  
+import urlHandler from '../plugins/download/url.js';  
+import stickerHandler from '../plugins/download/sticker.js';  
+import videoHandler from '../plugins/download/video.js';  
+import playHandler from '../plugins/download/play.js';  
+import tagallHandler from '../plugins/group/tagall.js';
 
 export async function handleCommands(commandName, sock, msg, args, extra) {  
     const { isOwner, isAdmin } = extra;  
