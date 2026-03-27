@@ -1,7 +1,7 @@
 import fs from 'fs';
 import config from '../../config.js';
 import os from 'os';
-import { aliveStyles } from '../../lib/alive.js'; 
+import { aliveStyles } from '../../lib/nexa/alive.js'; 
 
 export default async (sock, msg, args) => {
     const chat = msg.key.remoteJid;
