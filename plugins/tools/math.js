@@ -1,5 +1,5 @@
 // © 2026 arun•°Cumar. All Rights Reserved.
-import { calculate } from '../lib/calculate.js';
+import { calculate } from '../../lib/calculate.js';
 
 export default {
     name: 'math',
