@@ -1,5 +1,5 @@
 // © 2026 arun•°Cumar. All Rights Reserved.
-import { imageToSticker, videoToSticker, gifToSticker, toGif } from '../../lib/emix.js';
+import { imageToSticker, videoToSticker, gifToSticker } from '../../lib/emix.js';
 
 export default async (sock, msg, args) => {
     const from = msg.key.remoteJid;
