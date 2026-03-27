@@ -1,6 +1,6 @@
 
 import fs from 'fs';
-import { getRandomPing } from '../../lib/ping.js'; 
+import { getRandomPing } from '../../lib/nexa/ping.js'; 
 
 export default async (sock, msg, args) => {
     const chat = msg.key.remoteJid;
