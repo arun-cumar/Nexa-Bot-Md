@@ -1,4 +1,4 @@
-import { runtime, aliveDesigns } from '../../lib/functions.js';
+import { runtime, timeDesigns } from '../../lib/functions.js';
 import fs from 'fs';
 
 export default async (sock, msg) => {
@@ -11,17 +11,17 @@ export default async (sock, msg) => {
         const time = new Date().toLocaleTimeString();
 
         // Random Design
-        const design = aliveDesigns[Math.floor(Math.random() * aliveDesigns.length)];
+        const design = timeDesigns[Math.floor(Math.random() * timeDesigns.length)];
 
-        const aliveText = design
+        const timeText = design
             .replace('{user}', user)
             .replace('{uptime}', uptime)
             .replace('{date}', date)
             .replace('{time}', time);
 
         await sock.sendMessage(from, {
-            image: fs.readFileSync('./media/nexa.jpg'),
-            caption: aliveText
+            image: fs.readFileSync('../../media/nexa.jpg'),
+            caption: timeText
         }, { quoted: msg });
 
     } catch (err) {
