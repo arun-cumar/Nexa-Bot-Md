@@ -1,5 +1,5 @@
 import { downloadContentFromMessage } from '@whiskeysockets/baileys';
-import uploadToCatbox from '../lib/url.js'; 
+import uploadToCatbox from '../../lib/url.js'; 
 
 export default async (sock, msg, args) => {
     const from = msg.key.remoteJid;
