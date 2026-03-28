@@ -2,7 +2,7 @@
 import fs from 'fs';
 import path from 'path';
 import config from '../../config.js';
-import menuDesigns from '../../lib/nexa/menu.js';
+import { menuDesigns } from '../../lib/nexa/menu.js';
 
 export default async (sock, msg, args) => {
     try {
@@ -68,7 +68,7 @@ export default async (sock, msg, args) => {
                     body: "Nexa Menu",
                     mediaType: 1,
                     sourceUrl: "https://whatsapp.com/channel/0029VbB59W9GehENxhoI5l24",
-                    thumbnail: fs.readFileSync('../../media/nexa.jpg')
+                    thumbnail: fs.readFileSync( path.join(process.cwd(), 'media', 'nexa.jpg'))
                 }
             }
         }, { quoted: msg });
