@@ -4,7 +4,7 @@ import { getRandomPing } from '../../lib/nexa/ping.js';
 
 export default async (sock, msg, args) => {
     const chat = msg.key.remoteJid;
-    const imagePath = '../../media/nexa.jpg';
+    const imagePath = '../../../media/nexa.jpg';
 
     try {
         await sock.sendMessage(chat, { react: { text: "📡", key: msg.key } });
