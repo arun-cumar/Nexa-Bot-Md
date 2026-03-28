@@ -1,4 +1,4 @@
-import { setPrefix, getPrefix } from '../../lib/settings/prefix.js';
+import { setPrefix, getPrefix } from '../../lib/nexa/settings/prefix.js';
 
 export default async (sock, msg, args) => {
     const from = msg.key.remoteJid;
