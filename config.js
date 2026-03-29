@@ -9,7 +9,7 @@ const config = {
   
   DESCRIPTION: "Multi device WhatsApp bot",
   
-  PREFIX: ".!",
+  PREFIX: ".",
   
   SESSION_ID: [
     "SESSION_ID_1",
