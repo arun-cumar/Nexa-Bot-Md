@@ -1,5 +1,5 @@
 // © 2026 arun•°Cumar. All Rights Reserved.
-import { imageToSticker, videoToSticker, gifToSticker } from '../../lib/emix.js';
+import { imageToSticker, videoToSticker, gifToSticker } from '../../lib/store/emix.js';
 import { downloadMedia } from '../../lib/store/download/download.js';
 
 export default async (sock, msg, args) => {
