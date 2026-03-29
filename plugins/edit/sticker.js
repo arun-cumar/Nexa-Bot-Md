@@ -1,4 +1,4 @@
-import { createSticker } from "../../lib/store/sticker.js";
+import { createSticker } from "../../lib/store/emix.js";
 
 export default async (sock, msg, args) => {
     const chat = msg.key.remoteJid;
