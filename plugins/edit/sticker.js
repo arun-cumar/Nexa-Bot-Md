@@ -1,44 +1,23 @@
-import { imageToSticker, videoToSticker, gifToSticker } from '../../lib/store/emix.js';
-import { downloadMedia } from '../../lib/store/download/download.js';
+import { createSticker } from "../../lib/store/sticker.js";
 
-export default async (sock, msg) => {
-    const from = msg.key.remoteJid;
+export default async (sock, msg, args) => {
+    const chat = msg.key.remoteJid;
 
     try {
-        const quotedMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+        const stickerBuffer = await createSticker(sock, msg);
 
-        if (!quotedMsg) {
-            return await sock.sendMessage(from, {
-                text: "Reply to image/video/gif to make sticker!"
+        if (!stickerBuffer) {
+            return sock.sendMessage(chat, { 
+                text: "* Nexa-Bot MD STICKER ENGINE*\n\nReply to an image/video/gif." 
             }, { quoted: msg });
         }
 
-        const buffer = await downloadMedia(quotedMsg);
-        const type = Object.keys(quotedMsg)[0];
+        await sock.sendMessage(chat, { react: { text: "🎨", key: msg.key } });
 
-        if (type === 'imageMessage') {
-            const sticker = await imageToSticker(buffer, 'jpg');
-            await sock.sendMessage(from, { sticker }, { quoted: msg });
-        }
-        else if (type === 'videoMessage') {
-            if (quotedMsg.videoMessage?.gifPlayback) {
-                const sticker = await gifToSticker(buffer, 'mp4');
-                await sock.sendMessage(from, { sticker }, { quoted: msg });
-            } else {
-                const sticker = await videoToSticker(buffer, 'mp4');
-                await sock.sendMessage(from, { sticker }, { quoted: msg });
-            }
-        }
-        else {
-            await sock.sendMessage(from, {
-                text: "Only image/video supported!"
-            }, { quoted: msg });
-        }
+        await sock.sendMessage(chat, { sticker: stickerBuffer }, { quoted: msg });
 
-    } catch (err) {
-        console.log("Sticker Error:", err);
-        await sock.sendMessage(from, {
-            text: "❌ Sticker conversion failed!"
-        }, { quoted: msg });
+    } catch (error) {
+        console.error(error);
+        await sock.sendMessage(chat, { text: "❌ Failed to create sticker." });
     }
 };
