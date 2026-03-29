@@ -6,27 +6,36 @@ export default async (sock, msg, args) => {
     const from = msg.key.remoteJid;
 
     if (!args[0]) {
-        return sock.sendMessage(from, { text: "Provide a YouTube link!" });
+        return sock.sendMessage(from, {
+            text: "🎬 Provide a YouTube link!"
+        }, { quoted: msg });
     }
 
     try {
-        await sock.sendMessage(from, { react: { text: '⏳', key: msg.key } });
+        await sock.sendMessage(from, {
+            react: { text: '⏳', key: msg.key }
+        });
 
+        // ✅ correct function call
         const filePath = await downloadYt(args[0], 'video');
 
         await sock.sendMessage(from, {
-            video: { url: filePath },
+            video: fs.readFileSync(filePath),
             caption: "🎬 Nexa-Bot Downloader"
         }, { quoted: msg });
 
+        // ✅ delete temp file
         fs.unlinkSync(filePath);
 
-        await sock.sendMessage(from, { react: { text: '✅', key: msg.key } });
+        await sock.sendMessage(from, {
+            react: { text: '✅', key: msg.key }
+        });
 
     } catch (e) {
-        console.log(e);
+        console.log("YT Download Error:", e);
+
         await sock.sendMessage(from, {
             text: "❌ Download failed."
-        });
+        }, { quoted: msg });
     }
 };
