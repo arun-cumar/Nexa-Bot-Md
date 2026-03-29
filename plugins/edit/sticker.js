@@ -1,42 +1,48 @@
 // © 2026 arun•°Cumar. All Rights Reserved.
-import { imageToSticker, videoToSticker, gifToSticker } from '../../lib/store/emix.js';
+import { imageToSticker, videoToSticker, gifToSticker } from '../../lib/emix.js';
+import { downloadMedia } from '../../lib/store/download/download.js';
 
 export default async (sock, msg, args) => {
     const from = msg.key.remoteJid;
 
     try {
-        
-        const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
-        if (!quoted) {
-            return sock.sendMessage(from, { text: "Reply to an image, video, or gif to make a sticker!" });
+        const quotedMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+
+        if (!quotedMsg) {
+            return await sock.sendMessage(from, {
+                text: "Reply to image/video/gif to make sticker!"
+            }, { quoted: msg });
         }
 
-        let buffer;
+        // Download media buffer
+        const buffer = await downloadMedia(quotedMsg);
 
-        if (quoted.imageMessage) {
-            buffer = await sock.downloadMediaMessage({ message: quoted });
+        // Detect type
+        const type = Object.keys(quotedMsg)[0];
+
+        if (type === 'imageMessage') {
             const sticker = await imageToSticker(buffer, 'jpg');
-            return await sock.sendMessage(from, { sticker });
+            await sock.sendMessage(from, { sticker: sticker }, { quoted: msg });
         }
-
-        else if (quoted.videoMessage?.gifPlayback) {
-            buffer = await sock.downloadMediaMessage({ message: quoted });
-            const sticker = await gifToSticker(buffer, 'mp4');
-            return await sock.sendMessage(from, { sticker });
+        else if (type === 'videoMessage') {
+            if (quotedMsg.videoMessage?.gifPlayback) {
+                const sticker = await gifToSticker(buffer, 'mp4');
+                await sock.sendMessage(from, { sticker: sticker }, { quoted: msg });
+            } else {
+                const sticker = await videoToSticker(buffer, 'mp4');
+                await sock.sendMessage(from, { sticker: sticker }, { quoted: msg });
+            }
         }
-
-        else if (quoted.videoMessage) {
-            buffer = await sock.downloadMediaMessage({ message: quoted });
-            const sticker = await videoToSticker(buffer, 'mp4');
-            return await sock.sendMessage(from, { sticker });
-        }
-
         else {
-            await sock.sendMessage(from, { text: "Please reply to a valid media (Image/Video/GIF)" });
+            await sock.sendMessage(from, {
+                text: "Only image/video/gif supported!"
+            }, { quoted: msg });
         }
 
     } catch (err) {
-        console.error("Media Convert Error:", err);
-        await sock.sendMessage(from, { text: "❌ Convert failed" });
+        console.log("Sticker Error:", err);
+        await sock.sendMessage(from, {
+            text: "❌ Sticker conversion failed!"
+        }, { quoted: msg });
     }
 };
