@@ -6,7 +6,10 @@ export default async (sock, msg, args) => {
     const from = msg.key.remoteJid;
 
     try {
-        const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+        const quoted =
+            msg.message?.extendedTextMessage?.contextInfo?.quotedMessage ||
+            msg.message?.imageMessage?.contextInfo?.quotedMessage ||
+            msg.message?.videoMessage?.contextInfo?.quotedMessage;
 
         if (!quoted) {
             return sock.sendMessage(from, {
@@ -14,7 +17,6 @@ export default async (sock, msg, args) => {
             }, { quoted: msg });
         }
 
-        // download media using helper
         const { buffer, type, msgContent } = await downloadMedia(quoted);
 
         const caption = msgContent?.caption || "";
@@ -33,7 +35,11 @@ export default async (sock, msg, args) => {
             }, { quoted: msg });
         }
 
-        await sock.sendMessage(from, viewOnceContent, { quoted: msg });
+        await sock.sendMessage(from, {
+            viewOnceMessage: {
+                message: viewOnceContent
+            }
+        }, { quoted: msg });
 
     } catch (err) {
         console.error("VV Error:", err);
