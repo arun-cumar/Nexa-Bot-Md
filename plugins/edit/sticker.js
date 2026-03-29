@@ -1,23 +1,29 @@
-import { createSticker } from "../../lib/store/emix.js";
+import { makeSticker } from '../../lib/store/emix.js';
 
 export default async (sock, msg, args) => {
     const chat = msg.key.remoteJid;
 
     try {
-        const stickerBuffer = await createSticker(sock, msg);
+        const stickerBuffer = await makeSticker(msg);
 
         if (!stickerBuffer) {
-            return sock.sendMessage(chat, { 
-                text: "* Nexa-Bot MD STICKER ENGINE*\n\nReply to an image/video/gif." 
+            return sock.sendMessage(chat, {
+                text: "*Reply to an image, video or GIF with .sticker*"
             }, { quoted: msg });
         }
 
-        await sock.sendMessage(chat, { react: { text: "🎨", key: msg.key } });
+        await sock.sendMessage(chat, {
+            react: { text: "🎨", key: msg.key }
+        });
 
-        await sock.sendMessage(chat, { sticker: stickerBuffer }, { quoted: msg });
+        await sock.sendMessage(chat, {
+            sticker: stickerBuffer
+        }, { quoted: msg });
 
-    } catch (error) {
-        console.error(error);
-        await sock.sendMessage(chat, { text: "❌ Failed to create sticker." });
+    } catch (e) {
+        console.log(e);
+        await sock.sendMessage(chat, {
+            text: "❌ Sticker failed"
+        });
     }
 };
