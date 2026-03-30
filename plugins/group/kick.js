@@ -1,4 +1,4 @@
-import { kickUser } from '../../lib/message.js';
+import { kickUser } from '../../lib/group.js';
 export default {
     name: 'kick',
     category: 'group',
