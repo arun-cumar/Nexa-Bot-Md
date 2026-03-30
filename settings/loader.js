@@ -17,7 +17,7 @@ import kickHandler from '../plugins/group/kick.js';
 import demoteHandler from '../plugins/group/demote.js';
 import promoteHandler from '../plugins/group/promote.js';
 import welcomeHandler from '../plugins/group/welcome.js';
-
+import antilinkHandler from '../plugins/group/antilink.js';
 // map
 const commands = {
     menu: menuHandler,
@@ -45,7 +45,8 @@ const commands = {
     demote: demoteHandler,
     kick: kickHandler,
     mute: muteHandler,
-    welcome: welcomeHandler 
+    welcome: welcomeHandler,
+    antilink: antilinkHandler 
 };
 
 // handler
