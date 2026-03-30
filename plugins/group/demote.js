@@ -26,7 +26,6 @@ export default {
             return sock.sendMessage(groupJid, { text: 'Tag or reply to the admin you want to demote.' }, { quoted: msg });
         }
 
-        // Call logic
         const result = await demoteUser(sock, groupJid, target);
 
         if (result.status) {
