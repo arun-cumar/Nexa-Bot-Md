@@ -13,6 +13,7 @@ import { handleSession } from "./settings/session.js";
 import { handleOwnerEvents } from "./settings/community.js";
 import connectionHandler from "./settings/connection/connection.js";
 import messageHandler from "./message.js";
+import { sendWelcome } from './lib/group.js'; 
 import config from "./config.js"; 
 
 const sessionPath = "./session";
@@ -71,6 +72,17 @@ async function startNexa() {
     }
 });
 
+    sock.ev.on('group-participants.update', async (anu) => {
+    try {
+        console.log(anu); 
+        
+        if (anu.action === 'add') {
+            await sendWelcome(sock, anu.id, anu.participants);
+        }
+    } catch (err) {
+        console.log('Welcome Event Error:', err);
+     }
+ });
 }
 
 startNexa().catch(err => console.log("Start Error:", err));
