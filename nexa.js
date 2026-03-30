@@ -14,6 +14,7 @@ import { handleOwnerEvents } from "./settings/community.js";
 import connectionHandler from "./settings/connection/connection.js";
 import messageHandler from "./message.js";
 import { sendWelcome } from './lib/group.js'; 
+import { handleAntilink } from './lib/group.js';
 import config from "./config.js"; 
 
 const sessionPath = "./session";
@@ -62,19 +63,23 @@ async function startNexa() {
    
         handleOwnerEvents(sock);
 
-      await connectionHandler(sock, startNexa, saveCreds);
+      await connectionHandler(sock, startNexa, saveCreds);    
 
     sock.ev.on("messages.upsert", async (chatUpdate) => {
     try {
-        await messageHandler(sock, chatUpdate);
-    } catch (err) {
+        const msg = chatUpdate.messages[0];
+        if (!msg.message) return;
+   
+    await handleAntilink(sock, msg);
+   await messageHandler(sock,chatUpdate);
+         } catch (err) {
         console.log("Message Error:", err);
     }
 });
 
-    sock.ev.on('group-participants.update', async (anu) => {
+  sock.ev.on('group-participants.update', async (anu) => {
     try {
-        console.log(anu); 
+        console.log("Group Update: ",anu.action); 
         
         if (anu.action === 'add') {
             await sendWelcome(sock, anu.id, anu.participants);
